@@ -1,0 +1,8 @@
+{
+  "app": {
+    "name": "Attachment viewer",
+    "short_description": "View attachments in your help desk.",
+    "long_description": "View attachments in your help desk.",
+    "installation_instructions": "Simply click install."
+  }
+}

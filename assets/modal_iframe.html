@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Attachment preview modal</title>
+
+  <!-- Zendesk Garden (optional reference in comments) -->
+  <!-- https://developer.zendesk.com/apps/docs/developer-guide/setup -->
+  <!-- https://garden.zendesk.com/css-components/ -->
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    crossorigin="anonymous" />
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="./styles/main.css" />
+
+</head>
+
+<body>
+
+  <!-- Controls for the pdf pagination and zoom -->
+  <div id="pdf_controls" display="none">
+    <button id="prev">Previous</button>
+    <button id="next">Next</button>
+    <span>Page: <span id="page_num"></span> / <span id="page_count"></span></span>
+    <button id="zoom+">Zoom +</button>
+    <button id="zoom-">Zoom -</button>
+  </div>
+  <!-- Container to add the file preview element -->
+  <div id="preview"></div>
+
+  <script src="https://mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
+
+  <script type="module">
+    import {
+      isFileText,
+      isFileImage,
+      isFileVideo,
+      isFileAudio,
+      isFilePDF,
+      getFileUrlFromCurrentPage,
+      getExtensionFromUrl,
+      createImageElement,
+      createVideoElement,
+      createAudioElement
+    } from './scripts/utils.js';
+
+    const previewContainer = document.getElementById('preview');
+
+    // Handle pdf thanks to Mozilla's PDF.js library https://mozilla.github.io/pdf.js/
+
+    var { pdfjsLib } = globalThis;
+    // The workerSrc property shall be specified.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.mjs';
+    var pdfDoc = null,
+      pageNum = 1,
+      pageRendering = false,
+      pageNumPending = null,
+      scale = 0.8,
+      min_scale = 0.8,
+      max_scale = 2.4;
+
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    
+    /**
+     * Get page info from document, resize canvas accordingly, and render page.
+     * @param num Page number.
+     */
+    function renderPage(num) {
+      pageRendering = true;
+
+      // Using promise to fetch the page
+      pdfDoc.getPage(num).then((page) => {
+        var viewport = page.getViewport({ scale: scale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        // Render PDF page into canvas context
+        var renderContext = {
+          canvasContext: ctx,
+          viewport: viewport
+        };
+        var renderTask = page.render(renderContext);
+
+        // Wait for rendering to finish
+        renderTask.promise.then(function () {
+          pageRendering = false;
+          previewContainer.appendChild(canvas);
+          if (pageNumPending !== null) {
+            // New page rendering is pending
+            renderPage(pageNumPending);
+            pageNumPending = null;
+          }
+        });
+      });
+
+      // Update page counters
+      document.getElementById('page_num').textContent = num;
+    }
+
+    /**
+     * Preview PDF file from a given URL.
+     * @param {string} url - The URL of the PDF file to preview.
+     */
+    function previewPDF(url) {
+      document.getElementById('pdf_controls').style.display = 'block';
+      // Asynchronous download of PDF
+      pdfjsLib.getDocument(url).promise
+      .then((pdf) => {
+        pdfDoc = pdf;
+        document.getElementById('page_count').textContent = pdfDoc.numPages;
+        console.log('PDF loaded');
+        renderPage(pageNum);
+      })
+      .catch((error) => {
+        console.error('Error during PDF loading:', error);
+        previewContainer.textContent = 'Error loading PDF: ' + error.message;
+      });
+    }
+
+    /**
+     * If another page rendering in progress, waits until the rendering is
+     * finised. Otherwise, executes rendering immediately.
+     */
+    function queueRenderPage(num) {
+      if (pageRendering) {
+        pageNumPending = num;
+      } else {
+        renderPage(num);
+      }
+    }
+
+    /**
+     * Control of the Page for the pdf.
+     */
+    function onPrevPage() {
+      if (pageNum <= 1) { return; }
+      pageNum--;
+      queueRenderPage(pageNum);
+    }
+    document.getElementById('prev').addEventListener('click', onPrevPage);
+    function onNextPage() {
+      if (pageNum >= pdfDoc.numPages) { return; }
+      pageNum++;
+      queueRenderPage(pageNum);
+    }
+    document.getElementById('next').addEventListener('click', onNextPage);
+
+    /**
+     * Control of the Zoom for the pdf.
+     */
+    function onZoomPlus() {
+      if (scale >= max_scale) { return; }
+      scale += 0.8;
+      queueRenderPage(pageNum);
+    }
+    document.getElementById('zoom+').addEventListener('click', onZoomPlus);
+    function onZoomMinus() {
+      if (scale <= min_scale) { return; }
+      scale -= 0.8;
+      queueRenderPage(pageNum);
+    }
+    document.getElementById('zoom-').addEventListener('click', onZoomMinus);
+
+    /**
+     * Functions to preview different file types
+     * Preview text, image, video, and audio files.
+     * @param {string} url - The URL of the file to preview.
+     */
+    function previewText(url) {
+      fetch(url)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
+        .then(text => {
+          const pre = document.createElement('pre');
+          pre.textContent = text;
+          previewContainer.appendChild(pre);
+        })
+        .catch(error => {
+          previewContainer.textContent = 'Error loading file: ' + error.message;
+        });
+    }
+    function previewImage(url) {
+      const img = createImageElement(url);
+      previewContainer.appendChild(img);
+    }
+    function previewVideo(url) {
+      const video = createVideoElement(url);
+      previewContainer.appendChild(video);
+    }
+    function previewAudio(url) {
+      const audio = createAudioElement(url);
+      previewContainer.appendChild(audio);
+    }
+
+    /**
+     * Main function to preview a file based on its URL.
+     * It determines the file type and calls the appropriate preview function.
+     * @param {string} fileUrl - The URL of the file to preview.
+     */
+    function previewFile(fileUrl) {
+      previewContainer.innerHTML = '';
+      document.getElementById('pdf_controls').style.display = 'none';
+
+      // Determine file extension
+      const extension = getExtensionFromUrl(fileUrl);
+
+      if (isFilePDF(extension)) {
+        previewPDF(fileUrl)
+      } else if (isFileText(extension)) {
+        previewText(fileUrl);
+      } else if (isFileImage(extension)) {
+        previewImage(fileUrl);
+      } else if (isFileVideo(extension)) {
+        previewVideo(fileUrl);
+      } else if (isFileAudio(extension)) {
+        previewAudio(fileUrl);
+      } else {
+        // If the file type is not recognized, show an error message
+        previewContainer.textContent = 'Unsupported file type: ' + extension;
+      }
+    }
+
+    previewFile(getFileUrlFromCurrentPage());
+
+  </script>
+
+</body>
+
+</html>

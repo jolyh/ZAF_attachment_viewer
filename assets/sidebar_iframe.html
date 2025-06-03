@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Attachment previewer</title>
+
+  <!-- Zendesk Garden (optional reference in comments) -->
+  <!-- https://developer.zendesk.com/apps/docs/developer-guide/setup -->
+  <!-- https://garden.zendesk.com/css-components/ -->
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    crossorigin="anonymous" />
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+
+<body>
+
+  <!-- Handlebars Template that will be used to build the list of attachments in HTML -->
+  <script id="attachments-template" type="text/x-handlebars-template">
+    {{#if attachments.length}}
+      <ul id="attachment_list">
+        {{#each attachments}} 
+          <li><a id="attachment{{@index}}_{{this.viewType}}" class="attachment" href="{{this.url}}">{{this.name}}</a></li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p>No attachments found.</p>
+    {{/if}}
+  </script>
+
+  <div id="attachments-content">
+    <!-- Handlebars content will be injected here -->
+  </div>
+
+  <!-- Dependencies -->
+  <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@4.3.3/dist/handlebars.min.js"></script>
+  
+  <!-- Click Handler for attachments -->
+  <script type="module">
+    import { handleAttachment } from './scripts/sidebar_main.js';
+    
+    document.body.addEventListener('click', (event) => {
+      if (event.target.matches('.attachment')) {
+        event.preventDefault()
+        handleAttachment(event.target.href)
+      }
+    });
+  </script>
+
+</body>
+
+</html>
