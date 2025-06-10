@@ -23,7 +23,7 @@
 <body>
 
   <!-- Controls for the pdf pagination and zoom -->
-  <div id="pdf_controls" display="none">
+  <div id="pdf_controls" class="controls">
     <button id="prev">Previous</button>
     <button id="next">Next</button>
     <span>Page: <span id="page_num"></span> / <span id="page_count"></span></span>
@@ -44,6 +44,7 @@
       isFilePDF,
       getFileUrlFromCurrentPage,
       getExtensionFromUrl,
+      createTextElement,
       createImageElement,
       createVideoElement,
       createAudioElement
@@ -172,22 +173,9 @@
      * Preview text, image, video, and audio files.
      * @param {string} url - The URL of the file to preview.
      */
-    function previewText(url) {
-      fetch(url)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return response.text();
-        })
-        .then(text => {
-          const pre = document.createElement('pre');
-          pre.textContent = text;
-          previewContainer.appendChild(pre);
-        })
-        .catch(error => {
-          previewContainer.textContent = 'Error loading file: ' + error.message;
-        });
+    async function previewText(url) {
+      const txt = await createTextElement(url)
+      previewContainer.appendChild(txt);
     }
     function previewImage(url) {
       const img = createImageElement(url);

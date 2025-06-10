@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="height: 100%; display: flex; flex-direction: column; overflow-y: auto;" scroll="none">
 
 <head>
   <meta charset="utf-8" />
@@ -19,14 +19,14 @@
   <link rel="stylesheet" href="./styles/main.css" />
 </head>
 
-<body>
+<body style="height: 100%; display: flex; flex-direction: column; overflow-y: auto;" scroll="none">
 
   <!-- Handlebars Template that will be used to build the list of attachments in HTML -->
   <script id="attachments-template" type="text/x-handlebars-template">
     {{#if attachments.length}}
       <ul id="attachment_list">
         {{#each attachments}} 
-          <li><a id="attachment{{@index}}_{{this.viewType}}" class="attachment" href="{{this.url}}">{{this.name}}</a></li>
+          <li><a id="attachment{{@index}}_{{this.category}}" class="attachment" href="{{this.url}}" alt="">{{this.name}}</a> - {{this.created_at}}</li>
         {{/each}}
       </ul>
     {{else}}
@@ -34,7 +34,12 @@
     {{/if}}
   </script>
 
-  <div id="attachments-content">
+  <div class="file_list_options">
+    <label><input id="file_checkbox" class="category_checkbox" type="checkbox" name="option" value="file"> File</label>
+    <label><input id="media_checkbox" class="category_checkbox" type="checkbox" name="option" value="media"> Media</label>
+    <label><input id="display_here_checkbox" class="display_checkbox" type="checkbox" name="option" value="display"> Display Here</label>
+  </div>
+  <div id="attachments-content" scroll="auto" style="height: 100%; overflow-y: scroll; padding-top: 5px;">
     <!-- Handlebars content will be injected here -->
   </div>
 
@@ -44,13 +49,20 @@
   
   <!-- Click Handler for attachments -->
   <script type="module">
-    import { handleAttachment } from './scripts/sidebar_main.js';
+    import { handleAttachment, handleCategoryCheckboxClick } from './scripts/sidebar_main.js';
     
     document.body.addEventListener('click', (event) => {
+      
       if (event.target.matches('.attachment')) {
         event.preventDefault()
         handleAttachment(event.target.href)
       }
+      else if (event.target.matches('.category_checkbox')) {
+        const fileChecked = document.getElementById('file_checkbox').checked;
+        const mediaChecked = document.getElementById('media_checkbox').checked;
+        handleCategoryCheckboxClick(fileChecked, mediaChecked);
+      }
+
     });
   </script>
 

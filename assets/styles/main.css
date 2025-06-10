@@ -24,3 +24,21 @@ pre {
   border: 1px solid #ccc;
   background: #f9f9f9;
 }
+
+.controls {
+  display: none;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.file_list_options {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background-color: white;
+  border-bottom: 1px solid #ccc;
+}
